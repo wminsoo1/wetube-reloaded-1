@@ -41,7 +41,7 @@ export const getlogin = (req, res) =>
 export const postlogin = async (req, res) => {
   const { username, password } = req.body;
   const pageTitle = "Login";
-  const user = await User.findOne({ username });
+  const user = await User.findOne({ username, socialOnly: false });
   if (!user) {
     return res.status(400).render("login", {
       pageTitle,
@@ -113,30 +113,27 @@ export const finishGithubLogin = async (req, res) => {
     if (!emailObj) {
       return res.redirect("/login");
     }
-    const existingUser = await User.findOne({ email: emailObj.email });
-    if (existingUser) {
-      req.session.loggedIn = true;
-      req.session.user = existingUser;
-      return res.redirect("/");
-    } else {
-      const user = await User.create({
+    const user = await User.findOne({ email: emailObj.email });
+    if (!user) {
+      user = await User.create({
         email: emailObj.email,
         username: userData.login,
         password: "",
+        avatar_url: userData.avatar_url,
         socialOnly: true,
         name: userData.name,
         location: userData.location,
       });
-      req.session.loggedIn = true;
-      req.session.user = user;
-      return res.redirect("/");
     }
-  } else {
-    return res.redirect("/login");
+    req.session.loggedIn = true;
+    req.session.user = user;
+    return res.redirect("/");
   }
 };
 
 export const edit = (req, res) => res.send("Edit User");
-export const remove = (req, res) => res.send("Remove User");
 export const see = (req, res) => res.send("see");
-export const logout = (req, res) => res.send("logout");
+export const logout = (req, res) => {
+  req.session.destroy();
+  return res.redirect("/");
+};
